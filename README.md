@@ -1,1 +1,1 @@
-I use this to gather WhatsApp images and videos I have not yet copied from my Android phone to my computer.
+This moves media from my Android to my computer.
