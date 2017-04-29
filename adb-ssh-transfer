@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -o errexit
+
+user_home=/storage/emulated/0
+#cant get this working with "${ssh_opts[@]}" etc
+ssh_opts=(-oProxyCommand='adb-channel tcp:2222 com.arachnoid.sshelper/.SSHelperActivity 1')
+ssh_host=localhost
+
+move_folder () {
+  local src=$1
+  local dst=$2
+  adb shell test -d "$src" || return 0
+  rsync -avz -P --remove-source-files -e "ssh -oProxyCommand='adb-channel tcp:2222 com.arachnoid.sshelper/.SSHelperActivity 1'" "$ssh_host:$src/" "$dst" &&
+  ssh "${ssh_opts[@]}" $ssh_host find "$src/" -depth -type d -delete
+}
+
+#######################################
+# Copy to given directory all WhatsApp images and videos newer than a file
+# android-transfer-media-timestamp in WhatsApp/Media
+# Globals:
+#   NAME  (string)
+# Arguments:
+#   $@
+# Returns:
+#   None
+#######################################
+copy_whatsapp_media () {
+  local dst=$1
+  local ts=android-transfer-media-timestamp
+  local media=/storage/emulated/0/WhatsApp/Media/
+  local t
+  t=$(mktemp -d -t android-transfer-media.XXXXXX)
+  ssh "${ssh_opts[@]}" $ssh_host > "$t/log" << EOF
+    cd "$media" &&
+    find 'WhatsApp Video' 'WhatsApp Images' -maxdepth 1 -type f ! -iname '.*' -newer "$media/$ts" -print0
+EOF
+  if grep 'WhatsApp' "$t/log"; then # if no results, last line is useless
+    tail -n1 "$t/log" > "$t/f" # remove shell welcomes like 'Nexus_6P:3.10.73-ge0bfb9b'
+    rsync -av -P --files-from="$t/f" --from0 -e "ssh -oProxyCommand='adb-channel tcp:2222 com.arachnoid.sshelper/.SSHelperActivity 1'" "$ssh_host:$media" "$dst" &&
+    adb shell touch "$media/$ts"
+  fi
+  rm -rf "$t"
+}
+
+main () {
+  if (( $# != 1 )); then
+    printf "Usage: %s destination\n" "$0" >&2
+    exit 1
+  fi
+  local dest=$1
+  if [[ ! -d $dest ]]; then
+    printf "Error: Destination not directory or does not exist: %s\n" "$dest">&2
+    exit 1
+  fi
+
+  move_folder "$user_home/Download" "$dest"
+  move_folder "$user_home/DCIM/Camera" "$dest"
+  move_folder "$user_home/DCIM/Facebook" "$dest"
+  move_folder "$user_home/Pictures/Screenshots" "$dest"
+  # CameraFi, USB camera app
+  move_folder "$user_home/DCIM/CameraFi" "$dest"
+  move_folder "$user_home/Pictures/LINE" "$dest"
+  copy_whatsapp_media "$dest"
+}
+
+main "$@"
+
+
