@@ -2,11 +2,24 @@
 
 set -o errexit
 
+# Path on Android to user files
 user_home=/storage/emulated/0
+
 #cant get this working with "${ssh_opts[@]}" etc
 ssh_opts=(-oProxyCommand='adb-channel tcp:2222 com.arachnoid.sshelper/.SSHelperActivity 1')
 ssh_host=localhost
 
+#######################################
+# Move contents of first given directory from Android to second given directory
+# on computer.
+# Globals:
+#   $user_home  (string) Path on Android to user files
+# Arguments:
+#   $src  (string)  Path on Android to move files from, relative to $user_home
+#   $dst  (string)  Path on computer to copy files to
+# Returns:
+#   None
+#######################################
 move_folder () {
   local src=$1
   local dst=$2
@@ -19,16 +32,16 @@ move_folder () {
 # Copy to given directory all WhatsApp images and videos newer than a file
 # android-transfer-media-timestamp in WhatsApp/Media
 # Globals:
-#   NAME  (string)
+#   $user_home  (string) Path on Android to user files
 # Arguments:
-#   $@
+#   $dst  (string)  Path on computer to copy files to
 # Returns:
 #   None
 #######################################
 copy_whatsapp_media () {
   local dst=$1
   local ts=android-transfer-media-timestamp
-  local media=/storage/emulated/0/WhatsApp/Media/
+  local media=$user_home/WhatsApp/Media/
   local t
   t=$(mktemp -d -t android-transfer-media.XXXXXX)
   ssh "${ssh_opts[@]}" $ssh_host > "$t/log" << EOF
