@@ -4,6 +4,8 @@ set -o errexit
 
 # Path on Android to user files
 user_home=/storage/emulated/0
+# Path on Android to physical SD card
+user_card=/storage/9C33-6BBD
 
 #cant get this working with "${ssh_opts[@]}" etc
 ssh_opts=(-oProxyCommand='adb-channel tcp:2222 com.arachnoid.sshelper/.SSHelperActivity 1')
@@ -69,8 +71,10 @@ main () {
 
   move_folder "$user_home/Download" "$dest"
   move_folder "$user_home/DCIM/Camera" "$dest"
+  move_folder "$user_card/DCIM/Camera" "$dest" # Galaxy S8
   move_folder "$user_home/DCIM/Facebook" "$dest"
-  move_folder "$user_home/Pictures/Screenshots" "$dest"
+  move_folder "$user_home/Pictures/Screenshots" "$dest" # Nexus 6P
+  move_folder "$user_home/DCIM/Screenshots" "$dest" # Galaxy S8
   # CameraFi, USB camera app
   move_folder "$user_home/DCIM/CameraFi" "$dest"
   move_folder "$user_home/Pictures/LINE" "$dest"
